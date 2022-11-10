@@ -136,7 +136,7 @@ function Get-RedditVideoUrl{
 function Save-RedditVideo{
     [CmdletBinding(SupportsShouldProcess)]
     param(
-        [Parameter(Mandatory=$true, ValueFromPipeline=$true, HelpMessage="url", Position=0)]
+        [Parameter(Mandatory=$true, ValueFromPipeline=$true, HelpMessage="The Url of the page where the video is located", Position=0)]
         [string]$Url,
         [Parameter(Mandatory=$false, ValueFromPipeline=$true, HelpMessage="Destination Directory where the files are saved", Position=1)]
         [string]$DestinationPath,
@@ -144,22 +144,48 @@ function Save-RedditVideo{
         [switch]$OpenAfterDownload          
     )
 <#
-.SYNOPSIS
+    .SYNOPSIS
+
     Retrieve the download URL for a REDDIT video and download the file
-.DESCRIPTION
-    Retrieve the download URL for a REDDIT video and download the file for viewing pleasure
-.PARAMETER Url
+
+    .DESCRIPTION
+
+     Retrieve the download URL for a REDDIT video and download the file for viewing pleasure
+
+    .PARAMETER Url
+        
     The Url of the page where the video is located
-.PARAMETER DestinationPath
+
+    .PARAMETER DestinationPath
+
     Destination Directory where the files are saved
-.PARAMETER OpenAfterDownload
+
+    .PARAMETER OpenAfterDownload
+
     If set, will open the file afer download
 
-.EXAMPLE
-    Save-RedditVideo.ps1 -Url "https://www.reddit.com/r/ukraine/comments/yqwngl/volodymyr_zelenskyy_official_nov_9th_2022_about/"
+    .INPUTS
 
+    Url of the Reddit post
 
-.NOTES
+    .OUTPUTS
+
+    System.String. Local Path of the downloaded file
+
+    .EXAMPLE
+
+    PS> Save-RedditVideo.ps1 -Url "https://www.reddit.com/r/ukraine/comments/yqwngl/volodymyr_zelenskyy_official_nov_9th_2022_about/"
+
+    .LINK
+
+    https://arsscriptum.github.io/blog/powershell-save-reddit-video/
+
+    .LINK
+
+    https://github.com/arsscriptum/PowerShell.SaveRedditVideo
+
+    .NOTES
+
     Author: Guillaume Plante
     Last Updated: October 2022
 #>
