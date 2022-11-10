@@ -11,6 +11,9 @@ Then use that url with the function
     Save-RedditVideo.ps1 -Url "https://www.reddit.com/r/ukraine/comments/yqwngl/volodymyr_zelenskyy_official_nov_9th_2022_about/"
 ```
 
+### Doc
+
+https://github.com/arsscriptum/PowerShell.SaveRedditVideo/blob/main/doc/Save-RedditVideo.md
 
 ## Innards
 
