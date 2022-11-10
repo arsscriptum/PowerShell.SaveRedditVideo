@@ -22,10 +22,25 @@ Retrieve the download URL for a REDDIT video and download the file for viewing p
 
 ### Example 1
 ```powershell
-PS C:\> {{ Add example code here }}
+PS C:\> Save-RedditVideo.ps1 -Url "https://www.reddit.com/r/ukraine/comments/yqwngl/volodymyr_zelenskyy_official_nov_9th_2022_about/"
 ```
 
-{{ Add example description here }}
+Download video located at Url "https://www.reddit.com/r/ukraine/comments/yqwngl/volodymyr_zelenskyy_official_nov_9th_2022_about/" to DEFAULT PATH
+
+### Example 2
+```powershell
+PS C:\> .\Save-RedditVideo.ps1 -Url "https://www.reddit.com/r/nextfuckinglevel/comments/yqyj9i/cameraman_exploit_a_loophole" -DestinationPath "c:\Tmp" -OpenAfterDownload
+```
+
+Download video located at Url "https://www.reddit.com/r/nextfuckinglevel/comments/yqyj9i/cameraman_exploit_a_loophole"  to c:\Tmp\cameraman_exploit_a_loophole.mp4 and open after download
+
+### Example 3
+```powershell
+PS C:\> .\Save-RedditVideo.ps1 -Url "https://www.reddit.com/r/nextfuckinglevel/comments/yqyj9i/cameraman_exploit_a_loophole" -WhatIf
+```
+
+Get the download url for video at Url "https://www.reddit.com/r/nextfuckinglevel/comments/yqyj9i/cameraman_exploit_a_loophole"  but do not download
+
 
 ## PARAMETERS
 

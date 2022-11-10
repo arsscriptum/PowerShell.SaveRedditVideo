@@ -4,11 +4,15 @@
 #̷𝓍   🇵​​​​​🇴​​​​​🇼​​​​​🇪​​​​​🇷​​​​​🇸​​​​​🇭​​​​​🇪​​​​​🇱​​​​​🇱​​​​​ 🇸​​​​​🇨​​​​​🇷​​​​​🇮​​​​​🇵​​​​​🇹​​​​​ 🇧​​​​​🇾​​​​​ 🇬​​​​​🇺​​​​​🇮​​​​​🇱​​​​​🇱​​​​​🇦​​​​​🇺​​​​​🇲​​​​​🇪​​​​​🇵​​​​​🇱​​​​​🇦​​​​​🇳​​​​​🇹​​​​​🇪​​​​​.🇶​​​​​🇨​​​​​@🇬​​​​​🇲​​​​​🇦​​​​​🇮​​​​​🇱​​​​​.🇨​​​​​🇴​​​​​🇲​​​​​
 #>
 
-[CmdletBinding(SupportsShouldProcess)]
-param(
-    [Parameter(Mandatory=$true, ValueFromPipeline=$true, HelpMessage="url", Position=0)]
-    [string]$Url       
-)
+    [CmdletBinding(SupportsShouldProcess)]
+    param(
+        [Parameter(Mandatory=$true, ValueFromPipeline=$true, HelpMessage="The Url of the page where the video is located", Position=0)]
+        [string]$Url,
+        [Parameter(Mandatory=$false, ValueFromPipeline=$true, HelpMessage="Destination Directory where the files are saved", Position=1)]
+        [string]$DestinationPath,
+        [Parameter(Mandatory=$false, ValueFromPipeline=$true, HelpMessage="If set, will open the file afer download")]
+        [switch]$OpenAfterDownload          
+    )
 
 $ShowNotifPath = Join-Path "$PSScriptRoot\systray" "ShowSystemTrayNotification.ps1"
 . "$ShowNotifPath"
@@ -29,6 +33,65 @@ try{
 if($FatalError){
     return
 }
+
+
+
+
+function New-RandomFilename{
+<#
+    .SYNOPSIS
+            Create a RandomFilename 
+    .DESCRIPTION
+            Create a RandomFilename 
+#>
+
+    [CmdletBinding(SupportsShouldProcess)]
+    param(
+        [Parameter(Mandatory=$false)]
+        [string]$Path = "$ENV:Temp",
+        [Parameter(Mandatory=$false)]
+        [string]$Extension = 'tmp',
+        [Parameter(Mandatory=$false)]
+        [int]$MaxLen = 6,
+        [Parameter(Mandatory=$false)]
+        [switch]$CreateFile,
+        [Parameter(Mandatory=$false)]
+        [switch]$CreateDirectory
+    )    
+    try{
+        if($MaxLen -lt 4){throw "MaxLen must be between 4 and 36"}
+        if($MaxLen -gt 36){throw "MaxLen must be between 4 and 36"}
+        [string]$filepath = $Null
+        [string]$rname = (New-Guid).Guid
+        Write-Verbose "Generated Guid $rname"
+        [int]$rval = Get-Random -Minimum 0 -Maximum 9
+        Write-Verbose "Generated rval $rval"
+        [string]$rname = $rname.replace('-',"$rval")
+        Write-Verbose "replace rval $rname"
+        [string]$rname = $rname.SubString(0,$MaxLen) + '.' + $Extension
+        Write-Verbose "Generated file name $rname"
+        if($CreateDirectory -eq $true){
+            [string]$rdirname = (New-Guid).Guid
+            $newdir = Join-Path "$Path" $rdirname
+            Write-Verbose "CreateDirectory option: creating dir: $newdir"
+            $Null = New-Item -Path $newdir -ItemType "Directory" -Force -ErrorAction Ignore
+            $filepath = Join-Path "$newdir" "$rname"
+        }
+        $filepath = Join-Path "$Path" $rname
+        Write-Verbose "Generated filename: $filepath"
+
+        if($CreateFile -eq $true){
+            Write-Verbose "CreateFile option: creating file: $filepath"
+            $Null = New-Item -Path $filepath -ItemType "File" -Force -ErrorAction Ignore 
+        }
+        return $filepath
+        
+    }catch{
+        Show-ExceptionDetails $_ -ShowStack
+    }
+}
+
+
 
 function Save-OnlineFileWithProgress{
 
@@ -134,7 +197,7 @@ function Get-RedditVideoUrl{
 
 
 function Save-RedditVideo{
-    [CmdletBinding(SupportsShouldProcess)]
+    [CmdletBinding(SupportsShouldProcess, ConfirmImpact='Medium')]
     param(
         [Parameter(Mandatory=$true, ValueFromPipeline=$true, HelpMessage="The Url of the page where the video is located", Position=0)]
         [string]$Url,
@@ -195,6 +258,12 @@ function Save-RedditVideo{
     
 
    try{    
+        if(! $PSCmdlet.ShouldProcess("$Url")){
+            $DownloadVideoUrl = Get-RedditVideoUrl $Url
+            Write-Host -n -f DarkRed "`n[WHATIF Save-RedditVideo] " ; Write-Host -f DarkYellow "Would download $DownloadVideoUrl"
+            return
+        }
+
         if($PSBoundParameters.ContainsKey("DestinationPath") -eq $False){
             $MyVideos = [environment]::getfolderpath("myvideos")
             $RedditVideoPath = Join-Path $MyVideos 'reddit'
@@ -250,4 +319,9 @@ function Save-RedditVideo{
 }
 
 cls
-Save-RedditVideo $Url
+
+if($PSBoundParameters.ContainsKey('DestinationPath')){
+    Save-RedditVideo $Url $DestinationPath -OpenAfterDownload:$OpenAfterDownload
+}else{
+    Save-RedditVideo $Url -OpenAfterDownload:$OpenAfterDownload
+}
