@@ -133,10 +133,9 @@ function Save-OnlineFileWithProgress{
         $dlkb                                 = 0
         $downloadedBytes                      = $count
 
-        Register-AsciiProgressBar -Size 60
-        #hide the cursor
-        $e = "$([char]27)"
-        Write-Host "$e[?25l"  -NoNewline  
+        Register-AsciiProgressBar -Size 60 -ShowCursor $false
+        # Automatically hide the cursor, to keep the cursor visible, use the argument -ShowCursor $true
+        #Register-AsciiProgressBar -Size 60 -ShowCursor $true
 
         while ($count -gt 0){
            $targetStream.Write($buffer, 0, $count)
@@ -146,12 +145,10 @@ function Save-OnlineFileWithProgress{
            $msg                     = "Downloaded $dlkb Kb of $total_kilobytes Kb"
            $perc                    = (($downloadedBytes / $total_bytes)*100)
            if(($perc -gt 0)-And($perc -lt 100)){
-                Write-AsciiProgressBar $perc $msg 50 2 "White" "DarkGray"
+                Write-AsciiProgressBar $perc $msg 50 2 "Cyan" "DarkGray"
            }
         }
         Unregister-AsciiProgressBar
-        #show the cursor
-        Write-Host "$e[?25h"   
 
         $targetStream.Flush()
         $targetStream.Close()
