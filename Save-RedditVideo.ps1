@@ -10,13 +10,20 @@ param(
     [string]$Url       
 )
 
+$ShowNotifPath = Join-Path "$PSScriptRoot\systray" "ShowSystemTrayNotification.ps1"
+. "$ShowNotifPath"
 Import-Module  "$PSScriptRoot\lib\NativeProgressBar.dll" -Force
 
 $FatalError = $False
 try{
-Get-Command 'Write-AsciiProgressBar' -ErrorAction Stop | Out-Null 
+    Get-Command 'Register-AsciiProgressBar' -ErrorAction Stop | Out-Null 
+    Get-Command 'Unregister-AsciiProgressBar' -ErrorAction Stop | Out-Null 
+    Get-Command 'Write-AsciiProgressBar' -ErrorAction Stop | Out-Null 
+    Get-Command 'Show-SystemTrayNotification' -ErrorAction Stop | Out-Null 
 }catch [Exception]{
-    Write-Error $_ 
+    Write-Host "[MISSING DEPENDENCY] " -f DarkRed -n
+    Write-Host "$_" -f DarkYellow
+    Write-Host "Make sure to include:`n==> `"$PSScriptRoot\lib\NativeProgressBar.dll`"`n==> `"$ShowNotifPath`"" -f DarkRed
     $FatalError = $True
 }
 if($FatalError){
@@ -133,13 +140,29 @@ function Save-RedditVideo{
         [string]$Url,
         [Parameter(Mandatory=$false, ValueFromPipeline=$true, HelpMessage="Destination Directory where the files are saved", Position=1)]
         [string]$DestinationPath,
-        [Parameter(Mandatory=$false, ValueFromPipeline=$true, HelpMessage="Download Mode", Position=2)]
-        [ValidateSet('WGetJob','WGetStartProcess',"HttpWebRequest","BITS")]
-        [string]$DownloadMode="HttpWebRequest",
-        [Parameter(Mandatory=$false, ValueFromPipeline=$true, HelpMessage="Destination Directory where the files are saved")]
+        [Parameter(Mandatory=$false, ValueFromPipeline=$true, HelpMessage="If set, will open the file afer download")]
         [switch]$OpenAfterDownload          
     )
+<#
+.SYNOPSIS
+    Retrieve the download URL for a REDDIT video and download the file
+.DESCRIPTION
+    Retrieve the download URL for a REDDIT video and download the file for viewing pleasure
+.PARAMETER Url
+    The Url of the page where the video is located
+.PARAMETER DestinationPath
+    Destination Directory where the files are saved
+.PARAMETER OpenAfterDownload
+    If set, will open the file afer download
 
+.EXAMPLE
+    Save-RedditVideo.ps1 -Url "https://www.reddit.com/r/ukraine/comments/yqwngl/volodymyr_zelenskyy_official_nov_9th_2022_about/"
+
+
+.NOTES
+    Author: Guillaume Plante
+    Last Updated: October 2022
+#>
     try{
         $Null =  Add-Type -AssemblyName System.webURL -ErrorAction Stop | Out-Null    
     }catch{}
@@ -177,7 +200,13 @@ function Save-RedditVideo{
 
         Write-Host -n -f DarkRed "[RedditVideo] " ; Write-Host -f DarkYellow "Please wait...."
 
-       Save-OnlineFileWithProgress $DownloadVideoUrl $DestinationFile
+        Save-OnlineFileWithProgress $DownloadVideoUrl $DestinationFile
+
+        $Title = "Download Completed"
+        $IconPath = Join-Path "$PSScriptRoot\ico" "download.ico"
+
+        Show-SystemTrayNotification "Saved $DestinationFile" $Title $IconPath -Duration $Duration
+
        
         if($OpenAfterDownload){
             start "$DestinationFile"
