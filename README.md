@@ -15,3 +15,7 @@ Then use that url with the function
 ## Innards
 
 Gets the download url from ```redditsave.com``` 
+
+## Demo
+
+![Demo](https://raw.githubusercontent.com/arsscriptum/PowerShell.SaveRedditVideo/main/doc/demo.gif)
