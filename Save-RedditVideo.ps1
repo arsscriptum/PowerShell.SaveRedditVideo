@@ -200,10 +200,10 @@ function Save-RedditVideo{
 
         Write-Host -n -f DarkRed "[RedditVideo] " ; Write-Host -f DarkYellow "Please wait...."
 
-        Save-OnlineFileWithProgress $DownloadVideoUrl $DestinationFile
+        #Save-OnlineFileWithProgress $DownloadVideoUrl $DestinationFile
 
         $Title = "Download Completed"
-        $IconPath = Join-Path "$PSScriptRoot\ico" "download.ico"
+        $IconPath = Join-Path "$PSScriptRoot\ico" "download2.ico"
 
         Show-SystemTrayNotification "Saved $DestinationFile" $Title $IconPath -Duration $Duration
 
