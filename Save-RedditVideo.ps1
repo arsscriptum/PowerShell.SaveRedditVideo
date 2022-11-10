@@ -192,21 +192,27 @@ function Save-RedditVideo{
         }
 
         $DownloadVideoUrl = Get-RedditVideoUrl $Url
-        $WgetExe          = Get-WGetExecutable
 
         Write-Verbose "DestinationPath  : $DestinationPath"
         Write-Verbose "DestinationFile  : $DestinationFile"
         Write-Verbose "DownloadVideoUrl : $DownloadVideoUrl"
 
-        Write-Host -n -f DarkRed "[RedditVideo] " ; Write-Host -f DarkYellow "Please wait...."
+        Write-Host -n -f DarkRed "[Save-RedditVideo] " ; Write-Host -f DarkYellow "Please wait...."
 
+        $download_stop_watch = [System.Diagnostics.Stopwatch]::StartNew()
         Save-OnlineFileWithProgress $DownloadVideoUrl $DestinationFile
+        [timespan]$ts =  $download_stop_watch.Elapsed
+        if($ts.Ticks -gt 0){
+            $ElapsedTimeStr = "Downloaded in {0:mm:ss}" -f ([datetime]$ts.Ticks)
+        }
 
-        $Title = "Download Completed"
+        Write-Host -n -f DarkRed "`n[Save-RedditVideo] " ; Write-Host -f DarkYellow "$ElapsedTimeStr"
+
+        $Title = $ElapsedTimeStr
         $IconPath = Join-Path "$PSScriptRoot\ico" "download2.ico"
 
         Show-SystemTrayNotification "Saved $DestinationFile" $Title $IconPath -Duration $Duration
-
+     
        
         if($OpenAfterDownload){
             start "$DestinationFile"
