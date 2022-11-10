@@ -134,6 +134,9 @@ function Save-OnlineFileWithProgress{
         $downloadedBytes                      = $count
 
         Register-AsciiProgressBar -Size 60
+        #hide the cursor
+        $e = "$([char]27)"
+        Write-Host "$e[?25l"  -NoNewline  
 
         while ($count -gt 0){
            $targetStream.Write($buffer, 0, $count)
@@ -147,7 +150,9 @@ function Save-OnlineFileWithProgress{
            }
         }
         Unregister-AsciiProgressBar
-        
+        #show the cursor
+        Write-Host "$e[?25h"   
+
         $targetStream.Flush()
         $targetStream.Close()
         $targetStream.Dispose()
