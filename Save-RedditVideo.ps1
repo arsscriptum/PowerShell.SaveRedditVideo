@@ -4,37 +4,28 @@
 #̷𝓍   🇵​​​​​🇴​​​​​🇼​​​​​🇪​​​​​🇷​​​​​🇸​​​​​🇭​​​​​🇪​​​​​🇱​​​​​🇱​​​​​ 🇸​​​​​🇨​​​​​🇷​​​​​🇮​​​​​🇵​​​​​🇹​​​​​ 🇧​​​​​🇾​​​​​ 🇬​​​​​🇺​​​​​🇮​​​​​🇱​​​​​🇱​​​​​🇦​​​​​🇺​​​​​🇲​​​​​🇪​​​​​🇵​​​​​🇱​​​​​🇦​​​​​🇳​​​​​🇹​​​​​🇪​​​​​.🇶​​​​​🇨​​​​​@🇬​​​​​🇲​​​​​🇦​​​​​🇮​​​​​🇱​​​​​.🇨​​​​​🇴​​​​​🇲​​​​​
 #>
 
-    [CmdletBinding(SupportsShouldProcess)]
-    param(
-        [Parameter(Mandatory=$true, ValueFromPipeline=$true, HelpMessage="The Url of the page where the video is located", Position=0)]
-        [string]$Url,
-        [Parameter(Mandatory=$false, ValueFromPipeline=$true, HelpMessage="Destination Directory where the files are saved", Position=1)]
-        [string]$DestinationPath,
-        [Parameter(Mandatory=$false, ValueFromPipeline=$true, HelpMessage="If set, will open the file afer download")]
-        [switch]$OpenAfterDownload          
-    )
 
-$ShowNotifPath = Join-Path "$PSScriptRoot\systray" "ShowSystemTrayNotification.ps1"
-. "$ShowNotifPath"
-Import-Module  "$PSScriptRoot\lib\NativeProgressBar.dll" -Force
+function Import-NativeProgressModule_V2{
+    [CmdletBinding(SupportsShouldProcess)] 
+    Param()
 
-$FatalError = $False
-try{
-    Get-Command 'Register-AsciiProgressBar' -ErrorAction Stop | Out-Null 
-    Get-Command 'Unregister-AsciiProgressBar' -ErrorAction Stop | Out-Null 
-    Get-Command 'Write-AsciiProgressBar' -ErrorAction Stop | Out-Null 
-    Get-Command 'Show-SystemTrayNotification' -ErrorAction Stop | Out-Null 
-}catch [Exception]{
-    Write-Host "[MISSING DEPENDENCY] " -f DarkRed -n
-    Write-Host "$_" -f DarkYellow
-    Write-Host "Make sure to include:`n==> `"$PSScriptRoot\lib\NativeProgressBar.dll`"`n==> `"$ShowNotifPath`"" -f DarkRed
-    $FatalError = $True
+    Get-Module -Name "*NativeProgress*" | Remove-Module -Force
+   
+    $NativeProgressBarPath = Join-Path "$PSScriptRoot\lib" "NativeProgressBar.dll"
+    Write-Verbose "Import-Module `"$NativeProgressBarPath`" -Force -Scope Global"
+    Import-Module "$NativeProgressBarPath" -Force -Scope Global
+
+    try{
+        Get-Command 'Register-NativeProgressBar' -ErrorAction Stop | Out-Null 
+        Get-Command 'Unregister-NativeProgressBar' -ErrorAction Stop | Out-Null 
+        Get-Command 'Write-NativeProgressBar' -ErrorAction Stop | Out-Null 
+    }catch [Exception]{
+        Write-Host "[MISSING DEPENDENCY] " -f DarkRed -n
+        Write-Host "$_" -f DarkYellow
+        Write-Host "Make sure to include:`n==> `"$PSScriptRoot\lib\NativeProgressBar.dll`"`n==> `"$ShowNotifPath`"" -f DarkRed
+        throw "$_"
+    }
 }
-if($FatalError){
-    return
-}
-
-
 
 
 function New-RandomFilename{
@@ -93,7 +84,7 @@ function New-RandomFilename{
 
 
 
-function Save-OnlineFileWithProgress{
+function Save-OnlineFileWithProgress_V2{
 
     [CmdletBinding(SupportsShouldProcess)]
     param(
@@ -106,6 +97,8 @@ function Save-OnlineFileWithProgress{
     try{
         new-item -path $Path -ItemType 'File' -Force | Out-Null
         remove-item -path $Path -Force | Out-Null
+
+        Import-NativeProgressModule_V2
 
         $Script:ProgressTitle = 'STATE: DOWNLOAD'
         $uri = New-Object "System.Uri" "$Url"
@@ -133,7 +126,7 @@ function Save-OnlineFileWithProgress{
         $dlkb                                 = 0
         $downloadedBytes                      = $count
 
-        Register-AsciiProgressBar -Size 60 -ShowCursor $false
+        Register-NativeProgressBar -Size 60 -ShowCursor $false
         # Automatically hide the cursor, to keep the cursor visible, use the argument -ShowCursor $true
         #Register-AsciiProgressBar -Size 60 -ShowCursor $true
 
@@ -145,10 +138,10 @@ function Save-OnlineFileWithProgress{
            $msg                     = "Downloaded $dlkb Kb of $total_kilobytes Kb"
            $perc                    = (($downloadedBytes / $total_bytes)*100)
            if(($perc -gt 0)-And($perc -lt 100)){
-                Write-AsciiProgressBar $perc $msg 50 2 "Cyan" "DarkGray"
+                Write-NativeProgressBar $perc $msg 50 2 "Cyan" "DarkGray"
            }
         }
-        Unregister-AsciiProgressBar
+        Unregister-NativeProgressBar
 
         $targetStream.Flush()
         $targetStream.Close()
@@ -161,44 +154,75 @@ function Save-OnlineFileWithProgress{
 
 
 
-function Get-RedditVideoUrl{
+
+function Get-RedditVideoUrl_V2{
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory=$true, ValueFromPipeline=$true, HelpMessage="url", Position=0)]
         [string]$Url  
     )
 
-    try{
-        $Null =  Add-Type -AssemblyName System.webURL -ErrorAction Stop | Out-Null    
-    }catch{}
+    begin{
+     
+        [System.Collections.ArrayList]$LibObjects = [System.Collections.ArrayList]::new()
+        $CurrPath = "$PSScriptRoot"
+        $LibPath = "$CurrPath\lib\$($PSVersionTable.PSEdition)"
+        $Dlls = (gci -Path $LibPath -Filter '*.dll').FullName
+        ForEach($lib in $Dlls){
+            $libObj = add-type -Path $lib -Passthru
+            [void]$LibObjects.Add($libObj)
+        }
+
+    }
+    process{
+        try{
+            $urlToEncode = $Url
+            
+            $encodedURL = [System.Web.HttpUtility]::UrlEncode($urlToEncode) 
+
+            Write-Verbose "The encoded url is: $encodedURL"
+
+            #Encode URL code ends here
+
+            $RequestUrl = "https://www.redditsave.com/info?url=$encodedURL"
+
+            Write-Verbose "Invoke-RestMethod -Uri `"$RequestUrl`" -Method 'GET'"
+
+            $prevProgressPreference = $global:ProgressPreference
+            $global:ProgressPreference = 'SilentlyContinue'
+            $webreq = Invoke-WebRequest -Uri "$RequestUrl" -Method 'GET' -ErrorAction Stop
+            $global:ProgressPreference = $prevProgressPreference
+            
+            $StatusCode = $webreq.StatusCode
+            if($StatusCode -ne 200){
+                throw "Invalid request response ($StatusCode)"
+            }
     
+            [string]$Content = $webreq.Content
 
-   try{    
-        $urlToEncode = $Url
-        $encodedURL = [System.Web.HttpUtility]::UrlEncode($urlToEncode) 
+            $HtmlDoc = New-Object HtmlAgilityPack.HtmlDocument
+            $HtmlDoc.LoadHtml($Content)
+            $HtmlNode = $HtmlDoc.DocumentNode
 
-        Write-Verbose "The encoded url is: $encodedURL"
 
-        #Encode URL code ends here
 
-        $RequestUrl = "https://www.redditsave.com/info?url=$encodedURL"
-
-        Write-Verbose "Invoke-RestMethod -Uri `"$RequestUrl`" -Method 'GET'"
-        $Content = Invoke-RestMethod -Uri "$RequestUrl" -Method 'GET'
-
-        $i = $Content.IndexOf('"https://sd.redditsave.com/download.php')
-        $j = $Content.IndexOf('"',$i+1)
-        $l = $j-$i
-        $RequestUrl = $Content.Substring($i+1, $l-1)
-
-        Write-Output "$RequestUrl"
-    }catch{
-        Show-ExceptionDetails $_ -ShowStack
+            $DownloadInfo = $HtmlNode.SelectNodes("//div[@class='download-info']")
+            if($Null -eq $DownloadInfo) {throw "download info not found"}
+            $OuterHtml = $DownloadInfo.OuterHtml
+            $Index = $OuterHtml.IndexOf('https://sd.rapidsave.com/download.php')
+            $Index2 = $OuterHtml.IndexOf('>',$Index)
+            $Len = $Index2-$Index
+            $DownloadUrl = $OuterHtml.Substring($Index,$Len)
+            $DownloadUrl = $DownloadUrl.TrimEnd('"')
+            $DownloadUrl
+        }catch{
+            Show-ExceptionDetails $_ -ShowStack
+        }
     }
 }
 
 
-function Save-RedditVideo{
+function Save-RedditVideo_V2{
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact='Medium')]
     param(
         [Parameter(Mandatory=$true, ValueFromPipeline=$true, HelpMessage="The Url of the page where the video is located", Position=0)]
@@ -261,7 +285,7 @@ function Save-RedditVideo{
 
    try{    
         if(! $PSCmdlet.ShouldProcess("$Url")){
-            $DownloadVideoUrl = Get-RedditVideoUrl $Url
+            $DownloadVideoUrl = Get-RedditVideoUrl_V2 $Url
             Write-Host -n -f DarkRed "`n[WHATIF Save-RedditVideo] " ; Write-Host -f DarkYellow "Would download $DownloadVideoUrl"
             return
         }
@@ -288,7 +312,7 @@ function Save-RedditVideo{
             $DestinationFile = Join-Path $DestinationPath $UrlFileName
         }
 
-        $DownloadVideoUrl = Get-RedditVideoUrl $Url
+        $DownloadVideoUrl = Get-RedditVideoUrl_V2 $Url
 
         Write-Verbose "DestinationPath  : $DestinationPath"
         Write-Verbose "DestinationFile  : $DestinationFile"
@@ -297,7 +321,7 @@ function Save-RedditVideo{
         Write-Host -n -f DarkRed "[Save-RedditVideo] " ; Write-Host -f DarkYellow "Please wait...."
 
         $download_stop_watch = [System.Diagnostics.Stopwatch]::StartNew()
-        Save-OnlineFileWithProgress $DownloadVideoUrl $DestinationFile
+        Save-OnlineFileWithProgress_V2 $DownloadVideoUrl $DestinationFile
         [timespan]$ts =  $download_stop_watch.Elapsed
         if($ts.Ticks -gt 0){
             $ElapsedTimeStr = "Downloaded in {0:mm:ss}" -f ([datetime]$ts.Ticks)
@@ -305,10 +329,10 @@ function Save-RedditVideo{
 
         Write-Host -n -f DarkRed "`n[Save-RedditVideo] " ; Write-Host -f DarkYellow "$ElapsedTimeStr"
 
-        $Title = $ElapsedTimeStr
-        $IconPath = Join-Path "$PSScriptRoot\ico" "download2.ico"
+        #$Title = $ElapsedTimeStr
+        #$IconPath = Get-ToolsModuleDownloadIconPath
 
-        Show-SystemTrayNotification "Saved $DestinationFile" $Title $IconPath -Duration $Duration
+        #Show-SystemTrayNotification "Saved $DestinationFile" $Title $IconPath -Duration $Duration
      
        
         if($OpenAfterDownload){
@@ -320,10 +344,17 @@ function Save-RedditVideo{
     }
 }
 
-cls
 
-if($PSBoundParameters.ContainsKey('DestinationPath')){
-    Save-RedditVideo $Url $DestinationPath -OpenAfterDownload:$OpenAfterDownload
-}else{
-    Save-RedditVideo $Url -OpenAfterDownload:$OpenAfterDownload
+function Test-SaveRedditVideo{
+    [CmdletBinding(SupportsShouldProcess, ConfirmImpact='Medium')]
+    param()
+    Import-NativeProgressModule_V2 -Verbose
+    $Url = "https://www.reddit.com/r/Damnthatsinteresting/comments/16m3p30/i_saw_your_cellphone_add_i_raise_you_things_we/"
+    $DownloadVideoUrl = Get-RedditVideoUrl_V2 $Url -Verbose
+    Write-Host -n -f DarkRed "`n[Save-RedditVideo] " ; Write-Host -f DarkYellow "Would download $DownloadVideoUrl"
+    Read-Host "continue?"
+    cls
+    Save-RedditVideo_V2 $Url -OpenAfterDownload
 }
+
+Test-SaveRedditVideo

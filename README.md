@@ -22,3 +22,6 @@ Gets the download url from ```redditsave.com```
 ## Demo
 
 ![Demo](https://raw.githubusercontent.com/arsscriptum/PowerShell.SaveRedditVideo/main/doc/demo.gif)
+
+
+![Demo](https://raw.githubusercontent.com/arsscriptum/PowerShell.SaveRedditVideo/main/doc/demo2.gif)
